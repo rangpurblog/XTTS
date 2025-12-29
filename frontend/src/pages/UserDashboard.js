@@ -344,6 +344,8 @@ const GenerateVoice = ({ user, refreshUser }) => {
   const [selectedVoice, setSelectedVoice] = useState('');
   const [text, setText] = useState('');
   const [generating, setGenerating] = useState(false);
+  const [generatedAudio, setGeneratedAudio] = useState(null);
+  const [language, setLanguage] = useState('en');
 
   useEffect(() => {
     Promise.all([getMyVoices(), getPublicVoices()])
@@ -354,6 +356,7 @@ const GenerateVoice = ({ user, refreshUser }) => {
   }, []);
 
   const allVoices = [...myVoices, ...publicVoices];
+  const selectedVoiceData = allVoices.find(v => v.id === selectedVoice);
   const creditsNeeded = Math.max(1, Math.floor(text.length / 10));
 
   const handleGenerate = async () => {
@@ -366,9 +369,18 @@ const GenerateVoice = ({ user, refreshUser }) => {
       return;
     }
     setGenerating(true);
+    setGeneratedAudio(null);
     try {
-      await generateVoice({ voice_id: selectedVoice, text });
+      const response = await generateVoice({ 
+        voice_id: selectedVoice, 
+        voice_name: selectedVoiceData?.name || '',
+        text,
+        language
+      });
       toast.success('Voice generated successfully!');
+      if (response.data?.audio_url) {
+        setGeneratedAudio(response.data.audio_url);
+      }
       refreshUser();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Generation failed');
