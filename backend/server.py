@@ -793,13 +793,21 @@ async def get_admin_stats(admin = Depends(get_admin_user)):
     revenue = await db.orders.aggregate(revenue_pipeline).to_list(1)
     total_revenue = revenue[0]["total"] if revenue else 0
     
-    # GPU usage (simulated)
-    gpu_usage = {
-        "current": 45,
-        "memory_used": 6.2,
-        "memory_total": 16,
-        "temperature": 62
-    }
+    # Fetch stats from XTTS server
+    xtts_stats = {"users": 0, "total_voices": 0, "public_voices": 0}
+    gpu_usage = {"current": 0, "memory_used": 0, "memory_total": 16, "temperature": 0}
+    
+    try:
+        if XTTS_ADMIN_KEY:
+            headers = {"x-admin-key": XTTS_ADMIN_KEY}
+            response = await http_client.get(f"{XTTS_SERVER_URL}/admin/stats", headers=headers)
+            if response.status_code == 200:
+                xtts_stats = response.json()
+                # If XTTS provides GPU stats, use them
+                if "gpu" in xtts_stats:
+                    gpu_usage = xtts_stats["gpu"]
+    except Exception as e:
+        logger.warning(f"Failed to fetch XTTS stats: {e}")
     
     return {
         "total_users": total_users,
@@ -810,7 +818,8 @@ async def get_admin_stats(admin = Depends(get_admin_user)):
         "total_credits_used": total_credits_used,
         "total_generations": total_generations,
         "total_revenue": total_revenue,
-        "gpu_usage": gpu_usage
+        "gpu_usage": gpu_usage,
+        "xtts_stats": xtts_stats
     }
 
 # ==================== PAYMENT ACCOUNTS ====================
