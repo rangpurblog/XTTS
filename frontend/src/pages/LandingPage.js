@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Mic, Zap, Shield, Users, ChevronRight, Play, Volume2 } from 'lucide-react';
+import { Mic, Zap, Shield, Users, ChevronRight, CreditCard, Volume2 } from 'lucide-react';
 import { getPlans } from '@/lib/api';
 
 export default function LandingPage() {
