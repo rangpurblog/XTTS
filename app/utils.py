@@ -46,3 +46,32 @@ def get_user_voices(user_id: str):
         })
 
     return voices
+
+
+
+def get_public_voices():
+    public_voices = []
+
+    for user_id in os.listdir(BASE_DIR):
+        user_dir = os.path.join(BASE_DIR, user_id)
+        if not os.path.isdir(user_dir):
+            continue
+
+        for voice_id in os.listdir(user_dir):
+            meta_path = os.path.join(user_dir, voice_id, "meta.json")
+            ref_path = os.path.join(user_dir, voice_id, "ref.wav")
+
+            if not os.path.exists(meta_path):
+                continue
+
+            with open(meta_path, "r") as f:
+                meta = json.load(f)
+
+            if meta.get("public") is True:
+                public_voices.append({
+                    "voice_id": voice_id,
+                    "owner": user_id,
+                    "audio_url": f"/voices/{user_id}/{voice_id}/ref.wav"
+                })
+
+    return public_voices

@@ -1,5 +1,6 @@
 import os
 import uuid
+import json
 from TTS.api import TTS
 from app.audio_utils import wav_to_mp3
 from app.xtts_engine import XTTSVoiceCloner
@@ -64,3 +65,24 @@ def generate_voice(
     )
 
     return out_wav
+
+def set_voice_public(user_id: str, voice_name: str, public: bool):
+    voice_dir = os.path.join(BASE_DIR, user_id, voice_name)
+    meta_path = os.path.join(voice_dir, "meta.json")
+
+    if not os.path.exists(meta_path):
+        raise HTTPException(status_code=404, detail="Voice not found")
+
+    with open(meta_path, "r") as f:
+        meta = json.load(f)
+
+    meta["public"] = public
+
+    with open(meta_path, "w") as f:
+        json.dump(meta, f, indent=2)
+
+    return {
+        "status": "updated",
+        "voice_id": voice_name,
+        "public": public
+    }

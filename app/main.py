@@ -1,9 +1,9 @@
 from fastapi import FastAPI, UploadFile, Form
 from fastapi.staticfiles import StaticFiles
 from app.clone_voice import clone_voice
-from app.voice_service import generate_voice
+from app.voice_service import generate_voice, set_voice_public
 from app.clone_voice import delete_voice
-from app.utils import get_user_voices
+from app.utils import get_user_voices, get_public_voices
 
 app = FastAPI()
 # app.mount("/voices", StaticFiles(directory="voices"), name="voices")
@@ -24,6 +24,23 @@ def list_user_voices(user_id: str):
         "user_id": user_id,
         "voices": voices
     }
+
+@app.post("/admin/voice-public")
+def toggle_public(
+    user_id: str = Form(...),
+    voice_name: str = Form(...),
+    public: bool = Form(...)
+):
+    return set_voice_public(user_id, voice_name, public)
+
+
+
+@app.get("/voices/public")
+def list_public_voices():
+    return {
+        "voices": get_public_voices()
+    }
+
 
 
 @app.post("/delete-voice")
