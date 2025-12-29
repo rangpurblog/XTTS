@@ -686,26 +686,76 @@ async def clone_public_voice(
     admin = Depends(get_admin_user)
 ):
     audio_data = await audio_file.read()
-    audio_base64 = base64.b64encode(audio_data).decode()
     
-    voice_id = str(uuid.uuid4())
-    voice_doc = {
-        "id": voice_id,
-        "name": name,
-        "user_id": "admin",
-        "is_public": True,
-        "audio_data": audio_base64,
-        "created_at": datetime.now(timezone.utc).isoformat()
-    }
-    await db.voices.insert_one(voice_doc)
-    
-    return {"id": voice_id, "name": name, "message": "Public voice created"}
+    # Clone voice via XTTS server with admin user_id
+    try:
+        files = {"audio": (audio_file.filename, audio_data, audio_file.content_type or "audio/wav")}
+        data = {
+            "user_id": "admin",
+            "voice_name": name
+        }
+        
+        response = await http_client.post(
+            f"{XTTS_SERVER_URL}/clone-voice",
+            files=files,
+            data=data
+        )
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Voice cloning failed")
+            raise HTTPException(status_code=response.status_code, detail=error_detail)
+        
+        # Make it public via admin endpoint
+        if XTTS_ADMIN_KEY:
+            headers = {"x-admin-key": XTTS_ADMIN_KEY}
+            public_data = {
+                "user_id": "admin",
+                "voice_name": name,
+                "public": True
+            }
+            await http_client.post(f"{XTTS_SERVER_URL}/admin/voice-public", data=public_data, headers=headers)
+        
+        voice_id = str(uuid.uuid4())
+        voice_doc = {
+            "id": voice_id,
+            "name": name,
+            "voice_name": name,
+            "user_id": "admin",
+            "is_public": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.voices.insert_one(voice_doc)
+        
+        return {"id": voice_id, "name": name, "message": "Public voice created"}
+        
+    except httpx.RequestError as e:
+        logger.error(f"XTTS server connection error: {e}")
+        raise HTTPException(status_code=503, detail="Voice cloning service unavailable")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Public voice cloning error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to create public voice: {str(e)}")
 
 @api_router.delete("/admin/voices/{voice_id}")
 async def delete_public_voice(voice_id: str, admin = Depends(get_admin_user)):
-    result = await db.voices.delete_one({"id": voice_id, "is_public": True})
-    if result.deleted_count == 0:
+    voice = await db.voices.find_one({"id": voice_id, "is_public": True})
+    if not voice:
         raise HTTPException(status_code=404, detail="Public voice not found")
+    
+    # Delete from XTTS server
+    try:
+        if XTTS_ADMIN_KEY:
+            headers = {"x-admin-key": XTTS_ADMIN_KEY}
+            data = {
+                "user_id": voice.get("user_id", "admin"),
+                "voice_id": voice_id
+            }
+            await http_client.post(f"{XTTS_SERVER_URL}/admin/delete-voice", data=data, headers=headers)
+    except Exception as e:
+        logger.error(f"XTTS admin delete error: {e}")
+    
+    await db.voices.delete_one({"id": voice_id})
     return {"message": "Voice deleted"}
 
 # ==================== ADMIN STATS ====================
