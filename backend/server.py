@@ -30,6 +30,10 @@ ADMIN_SECRET = os.environ.get('ADMIN_SECRET', 'admin_super_secret_key')
 
 # XTTS Server
 XTTS_SERVER_URL = os.environ.get('XTTS_SERVER_URL', 'http://localhost:8001')
+XTTS_ADMIN_KEY = os.environ.get('XTTS_ADMIN_KEY', '')
+
+# HTTP Client for XTTS
+http_client = httpx.AsyncClient(timeout=120.0)
 
 # Create the main app
 app = FastAPI(title="VoiceClone AI API")
@@ -113,7 +117,9 @@ class VoiceResponse(BaseModel):
 
 class GenerateVoiceRequest(BaseModel):
     voice_id: str
+    voice_name: str
     text: str
+    language: Optional[str] = "en"
 
 class UserUpdateByAdmin(BaseModel):
     credits: Optional[int] = None
@@ -443,11 +449,54 @@ async def add_credits(user_id: str, credits: int, admin = Depends(get_admin_user
 
 @api_router.get("/voices/my")
 async def get_my_voices(user = Depends(get_current_user)):
+    # Fetch from XTTS server
+    try:
+        response = await http_client.get(f"{XTTS_SERVER_URL}/voices/{user['id']}")
+        if response.status_code == 200:
+            xtts_voices = response.json()
+            # Merge with our DB for additional metadata
+            voices = []
+            for v in xtts_voices:
+                voice_doc = await db.voices.find_one(
+                    {"user_id": user["id"], "voice_name": v.get("voice_name", v.get("name"))}, 
+                    {"_id": 0}
+                )
+                voices.append({
+                    "id": voice_doc["id"] if voice_doc else str(uuid.uuid4()),
+                    "name": v.get("voice_name", v.get("name")),
+                    "user_id": user["id"],
+                    "is_public": v.get("public", False),
+                    "created_at": voice_doc["created_at"] if voice_doc else datetime.now(timezone.utc).isoformat()
+                })
+            return voices
+    except Exception as e:
+        logger.error(f"XTTS server error: {e}")
+    
+    # Fallback to local DB
     voices = await db.voices.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return voices
 
 @api_router.get("/voices/public")
 async def get_public_voices():
+    # Fetch public voices from XTTS admin endpoint
+    try:
+        headers = {"x-admin-key": XTTS_ADMIN_KEY} if XTTS_ADMIN_KEY else {}
+        response = await http_client.get(f"{XTTS_SERVER_URL}/admin/voices", headers=headers)
+        if response.status_code == 200:
+            all_voices = response.json()
+            # Filter public voices
+            public_voices = [v for v in all_voices if v.get("public", False)]
+            return [{
+                "id": v.get("voice_id", str(uuid.uuid4())),
+                "name": v.get("voice_name", "Unknown"),
+                "user_id": v.get("user_id", "admin"),
+                "is_public": True,
+                "created_at": v.get("created_at", datetime.now(timezone.utc).isoformat())
+            } for v in public_voices]
+    except Exception as e:
+        logger.error(f"XTTS server error: {e}")
+    
+    # Fallback to local DB
     voices = await db.voices.find({"is_public": True}, {"_id": 0}).sort("created_at", -1).to_list(100)
     return voices
 
@@ -459,24 +508,39 @@ async def clone_voice(
 ):
     # Check voice clone limit
     if user["voice_clone_used"] >= user["voice_clone_limit"]:
-        raise HTTPException(status_code=400, detail="Voice clone limit reached")
+        raise HTTPException(status_code=400, detail="Voice clone limit reached. Please upgrade your plan.")
     
     # Read audio file
     audio_data = await audio_file.read()
-    audio_base64 = base64.b64encode(audio_data).decode()
     
-    # Call XTTS server (simulated for now)
-    # In production, this would call the actual XTTS server
+    # Call XTTS server /clone-voice endpoint
     try:
-        # Simulated response - in production call XTTS_SERVER_URL
+        files = {"audio": (audio_file.filename, audio_data, audio_file.content_type or "audio/wav")}
+        data = {
+            "user_id": user["id"],
+            "voice_name": name
+        }
+        
+        response = await http_client.post(
+            f"{XTTS_SERVER_URL}/clone-voice",
+            files=files,
+            data=data
+        )
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "Voice cloning failed")
+            raise HTTPException(status_code=response.status_code, detail=error_detail)
+        
+        result = response.json()
         voice_id = str(uuid.uuid4())
         
+        # Store in our DB for tracking
         voice_doc = {
             "id": voice_id,
             "name": name,
+            "voice_name": name,
             "user_id": user["id"],
             "is_public": False,
-            "audio_data": audio_base64,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.voices.insert_one(voice_doc)
@@ -487,8 +551,19 @@ async def clone_voice(
             {"$inc": {"voice_clone_used": 1}}
         )
         
-        return {"id": voice_id, "name": name, "message": "Voice cloned successfully"}
+        return {
+            "id": voice_id, 
+            "name": name, 
+            "message": result.get("message", "Voice cloned successfully")
+        }
+        
+    except httpx.RequestError as e:
+        logger.error(f"XTTS server connection error: {e}")
+        raise HTTPException(status_code=503, detail="Voice cloning service unavailable. Please try again later.")
+    except HTTPException:
+        raise
     except Exception as e:
+        logger.error(f"Voice cloning error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to clone voice: {str(e)}")
 
 @api_router.delete("/voices/{voice_id}")
@@ -497,6 +572,19 @@ async def delete_voice(voice_id: str, user = Depends(get_current_user)):
     if not voice:
         raise HTTPException(status_code=404, detail="Voice not found")
     
+    # Delete from XTTS server
+    try:
+        data = {
+            "user_id": user["id"],
+            "voice_name": voice.get("voice_name", voice.get("name"))
+        }
+        response = await http_client.post(f"{XTTS_SERVER_URL}/delete-voice", data=data)
+        if response.status_code != 200:
+            logger.warning(f"XTTS delete failed: {response.text}")
+    except Exception as e:
+        logger.error(f"XTTS delete error: {e}")
+    
+    # Delete from our DB
     await db.voices.delete_one({"id": voice_id})
     await db.users.update_one({"id": user["id"]}, {"$inc": {"voice_clone_used": -1}})
     return {"message": "Voice deleted"}
@@ -508,18 +596,42 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
     credits_needed = max(1, text_length // 10)  # 1 credit per 10 chars
     
     if user["credits"] < credits_needed:
-        raise HTTPException(status_code=400, detail="Insufficient credits")
+        raise HTTPException(status_code=400, detail=f"Insufficient credits. Need {credits_needed}, have {user['credits']}")
     
     voice = await db.voices.find_one({"id": request.voice_id})
     if not voice:
         raise HTTPException(status_code=404, detail="Voice not found")
     
     # Check if user owns the voice or it's public
-    if voice["user_id"] != user["id"] and not voice["is_public"]:
+    if voice["user_id"] != user["id"] and not voice.get("is_public"):
         raise HTTPException(status_code=403, detail="Access denied to this voice")
     
-    # Simulated voice generation - in production call XTTS server
+    # Call XTTS server /tts endpoint
     try:
+        # Determine user_id for XTTS (use voice owner's ID)
+        xtts_user_id = voice["user_id"]
+        voice_name = voice.get("voice_name", voice.get("name"))
+        
+        data = {
+            "user_id": xtts_user_id,
+            "voice_name": voice_name,
+            "text": request.text,
+            "language": request.language or "en"
+        }
+        
+        response = await http_client.post(f"{XTTS_SERVER_URL}/tts", data=data)
+        
+        if response.status_code != 200:
+            error_detail = response.json().get("detail", "TTS generation failed")
+            raise HTTPException(status_code=response.status_code, detail=error_detail)
+        
+        result = response.json()
+        audio_url = result.get("audio_url", "")
+        
+        # Prepend XTTS server URL if relative path
+        if audio_url and not audio_url.startswith("http"):
+            audio_url = f"{XTTS_SERVER_URL}{audio_url}"
+        
         # Deduct credits
         await db.users.update_one(
             {"id": user["id"]},
@@ -527,12 +639,16 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
         )
         
         # Record usage
+        generation_id = str(uuid.uuid4())
         await db.voice_generations.insert_one({
-            "id": str(uuid.uuid4()),
+            "id": generation_id,
             "user_id": user["id"],
             "voice_id": request.voice_id,
+            "voice_name": voice_name,
+            "text": request.text,
             "text_length": text_length,
             "credits_used": credits_needed,
+            "audio_url": audio_url,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
         
@@ -546,8 +662,20 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
         })
         
         return {
+            "id": generation_id,
             "message": "Voice generated successfully",
             "credits_used": credits_needed,
+            "audio_url": audio_url
+        }
+        
+    except httpx.RequestError as e:
+        logger.error(f"XTTS server connection error: {e}")
+        raise HTTPException(status_code=503, detail="TTS service unavailable. Please try again later.")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"TTS generation error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate voice: {str(e)}")
             "audio_url": f"/api/audio/generated/{str(uuid.uuid4())}"
         }
     except Exception as e:
