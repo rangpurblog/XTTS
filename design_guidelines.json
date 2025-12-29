@@ -1,0 +1,168 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "Creative Designer (Top 1%)",
+    "principles": [
+      "Fusion over Imitation",
+      "Emotion First",
+      "Content is King",
+      "Zoom In",
+      "Negative Space",
+      "Contrast"
+    ]
+  },
+  "project": {
+    "name": "VoiceClone AI",
+    "type": "SaaS Platform",
+    "theme": "Light Mode (Swiss High-Contrast with Sonic Blue Accents)",
+    "font_strategy": "The 'Soft Utility' (Rounded Humanist Sans + Clean Sans Body)"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Outfit, sans-serif",
+      "weights": ["500", "700"],
+      "usage": "Main headings, section titles, hero text",
+      "letter_spacing": "tracking-tight"
+    },
+    "body": {
+      "font_family": "Inter, sans-serif",
+      "weights": ["400", "500"],
+      "usage": "Paragraphs, UI labels, data tables",
+      "letter_spacing": "tracking-normal"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "usage": "API keys, code snippets, technical data"
+    }
+  },
+  "colors": {
+    "palette": {
+      "primary": {
+        "name": "Sonic Indigo",
+        "hex": "#4F46E5",
+        "tailwind": "indigo-600",
+        "usage": "Primary buttons, active states, key accents"
+      },
+      "secondary": {
+        "name": "Electric Violet",
+        "hex": "#7C3AED",
+        "tailwind": "violet-600",
+        "usage": "Gradients, secondary accents"
+      },
+      "background": {
+        "default": "#FFFFFF",
+        "subtle": "#F8FAFC",
+        "dark_section": "#0F172A"
+      },
+      "text": {
+        "primary": "#0F172A",
+        "secondary": "#475569",
+        "muted": "#94A3B8"
+      },
+      "status": {
+        "success": "#10B981",
+        "error": "#EF4444",
+        "warning": "#F59E0B"
+      }
+    },
+    "gradients": {
+      "hero_text": "bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-violet-600",
+      "button_hover": "hover:bg-gradient-to-r hover:from-indigo-600 hover:to-violet-600"
+    }
+  },
+  "layout": {
+    "spacing_system": {
+      "base": "4px",
+      "container_padding": "p-6 md:p-12 lg:p-24",
+      "section_gap": "gap-12 md:gap-24"
+    },
+    "grids": {
+      "marketing": "Mode A: The Tetris Grid (Asymmetrical, Artful)",
+      "dashboard": "Mode B: The Control Room Grid (Dense, Functional)"
+    },
+    "containers": {
+      "max_width": "max-w-7xl mx-auto",
+      "card_radius": "rounded-xl",
+      "button_radius": "rounded-full"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30 transition-all duration-300 rounded-full px-8 py-3 font-medium",
+      "secondary": "bg-white text-slate-900 border border-slate-200 hover:border-indigo-200 hover:bg-slate-50 transition-all duration-300 rounded-full px-8 py-3 font-medium",
+      "ghost": "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-full px-6 py-2 transition-colors"
+    },
+    "cards": {
+      "marketing": "bg-white border border-slate-100 shadow-xl shadow-slate-200/50 rounded-2xl p-8 hover:-translate-y-1 transition-transform duration-300",
+      "dashboard": "bg-white border border-slate-200 shadow-sm rounded-xl p-6",
+      "glass": "bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg"
+    },
+    "inputs": {
+      "default": "bg-white border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 rounded-lg px-4 py-2 transition-all"
+    }
+  },
+  "visual_enhancers": {
+    "shadows": {
+      "soft": "shadow-[0_8px_30px_rgb(0,0,0,0.04)]",
+      "glow": "shadow-[0_0_20px_rgba(79,70,229,0.3)]"
+    },
+    "textures": {
+      "noise": "bg-[url('/noise.png')] opacity-5",
+      "grid": "bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"
+    },
+    "animations": {
+      "hover_lift": "hover:-translate-y-1 transition-transform duration-300",
+      "fade_in": "animate-in fade-in duration-500"
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_abstract": "https://images.unsplash.com/photo-1759912804199-a104b710a308?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "hero_mic": "https://images.unsplash.com/photo-1643652631396-181154ca7d8a?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "studio_vibe": "https://images.pexels.com/photos/3783471/pexels-photo-3783471.jpeg",
+      "avatars": [
+        "https://images.unsplash.com/photo-1584347922562-5d9542ec02ba?crop=entropy&cs=srgb&fm=jpg&q=85",
+        "https://images.pexels.com/photos/8367851/pexels-photo-8367851.jpeg",
+        "https://images.unsplash.com/photo-1603207757545-de4fffdb404c?crop=entropy&cs=srgb&fm=jpg&q=85"
+      ]
+    },
+    "icons": "lucide-react"
+  },
+  "instructions_to_main_agent": {
+    "general": [
+      "Follow the 'E1' persona: Bold, clean, and emotionally directed.",
+      "Use the 'Tetris Grid' for the landing page to avoid boring symmetry.",
+      "Use the 'Control Room Grid' for the dashboard for maximum data density.",
+      "Ensure all interactive elements have `data-testid` attributes.",
+      "Use 'Outfit' font for all headings and 'Inter' for body text.",
+      "Implement the 'Sonic Indigo' primary color for all main CTAs.",
+      "Use 'Glassmorphism' for the sticky header and modal overlays.",
+      "Do NOT use generic gradients; use the specified 'Sonic Indigo' to 'Electric Violet' gradient sparingly."
+    ],
+    "files": {
+      "css": "Update /app/frontend/src/index.css with the new color variables and font imports.",
+      "tailwind": "Update /app/frontend/tailwind.config.js to extend the theme with 'Outfit' and 'Inter' fonts and custom colors."
+    }
+  },
+  "UNIVERSAL_GUIDELINES_FOR_MAIN_AGENT": [
+    "You tend to converge toward generic, 'on distribution' outputs. In frontend design, this creates what users call the 'AI slop' aesthetic. Avoid this: make creative, distinctive frontends that surprise and delight.",
+    "Dark colors look good when used independently without gradients. DO NOT use dark colors as gradients",
+    "Don't make generic centered layouts, simplistic gradients, and uniform styling.",
+    "Create depth through layered design elements with z-index hierarchy",
+    "Use glass-morphism effects with backdrop filters (12-24px blur)",
+    "You MUST NOT apply universal transition. Eg: `transition: all`. This results in breaking transforms. Always add transitions for specific interactive elements like button, input excluding transforms",
+    "You MUST NOT center align the app container, ie do not add `.App { text-align: center; }` in the css file. This disrupts the human natural reading flow of text",
+    "Always use modern button styles like pill-shaped, or sharp button with interaction animations & color relevant to the app style",
+    "NEVER: use AI assistant Emoji characters like 🤖🧠💭💡🔮🎯📚🎭🎬🎪🎉🎊🎁🎀🎂🍰🎈🎨🎰💰💵💳🏦💎🪙💸🤑📊📈📉💹🔢🏆🥇 etc for icons.",
+    "Every interaction needs micro-animations - hover states, transitions, parallax effects, and entrance animations. Static = dead.",
+    "Use 2-3x more spacing than feels comfortable. Cramped designs look cheap.",
+    "Subtle grain textures, noise overlays, custom cursors, selection states, and loading animations: separates good from extraordinary.",
+    "Main agent relies on these image URLs. Missing categories (especially sponsor logos) = main agent will use placeholder text which is FORBIDDEN",
+    "Prioritize using pre-existing components from src/components/ui when applicable",
+    "Create new components that match the style and conventions of existing components when needed",
+    "Examine existing components to understand the project's component patterns before creating new ones",
+    "Components MUST use named exports (export const ComponentName = ...)",
+    "Pages MUST use default exports (export default function PageName() {...})",
+    "Use `sonner` for toasts. Sonner component are located in `/app/src/components/ui/sonner.tsx`"
+  ]
+}
