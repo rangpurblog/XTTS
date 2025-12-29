@@ -440,6 +440,24 @@ const GenerateVoice = ({ user, refreshUser }) => {
                 />
                 <p className="text-xs text-slate-500">{text.length} characters</p>
               </div>
+              <div className="space-y-2">
+                <Label>Language</Label>
+                <Select value={language} onValueChange={setLanguage}>
+                  <SelectTrigger data-testid="language-select">
+                    <SelectValue placeholder="Select language" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="bn">Bengali</SelectItem>
+                    <SelectItem value="hi">Hindi</SelectItem>
+                    <SelectItem value="es">Spanish</SelectItem>
+                    <SelectItem value="fr">French</SelectItem>
+                    <SelectItem value="de">German</SelectItem>
+                    <SelectItem value="ja">Japanese</SelectItem>
+                    <SelectItem value="zh">Chinese</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
               <Button 
                 className="btn-primary w-full"
                 onClick={handleGenerate}
@@ -448,6 +466,38 @@ const GenerateVoice = ({ user, refreshUser }) => {
               >
                 {generating ? 'Generating...' : 'Generate Voice'}
               </Button>
+              
+              {/* Audio Player */}
+              {generatedAudio && (
+                <Card className="bg-indigo-50 border-indigo-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-full bg-indigo-600 flex items-center justify-center">
+                        <Play className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-slate-900">Generated Audio</p>
+                        <p className="text-xs text-slate-500">Click play to listen</p>
+                      </div>
+                    </div>
+                    <audio 
+                      controls 
+                      className="w-full" 
+                      src={generatedAudio}
+                      data-testid="generated-audio"
+                    >
+                      Your browser does not support the audio element.
+                    </audio>
+                    <a 
+                      href={generatedAudio} 
+                      download="generated_voice.mp3"
+                      className="inline-flex items-center gap-2 mt-3 text-sm text-indigo-600 hover:underline"
+                    >
+                      Download MP3
+                    </a>
+                  </CardContent>
+                </Card>
+              )}
             </CardContent>
           </Card>
         </div>
