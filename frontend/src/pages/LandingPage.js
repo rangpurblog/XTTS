@@ -55,15 +55,15 @@ export default function LandingPage() {
             <div className="animate-fade-in">
               <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 text-sm font-medium mb-6">
                 <Zap className="w-4 h-4" />
-                Powered by XTTS v2
+                Advanced AI Voice Technology
               </div>
               <h1 className="font-heading text-4xl sm:text-5xl lg:text-6xl font-bold text-slate-900 leading-tight mb-6">
-                Clone Any Voice with
-                <span className="gradient-text"> AI Precision</span>
+                Text to Realistic Voice
+                <span className="gradient-text"> & Voice Clone</span>
               </h1>
               <p className="text-lg text-slate-600 mb-8 max-w-lg">
-                Transform your audio projects with state-of-the-art voice cloning technology. 
-                Create realistic voice replicas in seconds.
+                Convert any text to natural-sounding speech and clone voices with incredible accuracy. 
+                Create professional audio content in seconds.
               </p>
               <div className="flex flex-wrap gap-4">
                 <Link to="/register">
