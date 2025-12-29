@@ -676,10 +676,6 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
     except Exception as e:
         logger.error(f"TTS generation error: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to generate voice: {str(e)}")
-            "audio_url": f"/api/audio/generated/{str(uuid.uuid4())}"
-        }
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate voice: {str(e)}")
 
 # ==================== ADMIN PUBLIC VOICES ====================
 
