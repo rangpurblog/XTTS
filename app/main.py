@@ -1,6 +1,7 @@
 from fastapi import FastAPI, UploadFile, Form
 from app.clone_voice import clone_voice
 from app.voice_service import generate_voice
+from app.clone_voice import delete_voice
 
 
 app = FastAPI()
@@ -13,7 +14,15 @@ async def clone(
 ):
     return clone_voice(audio, user_id, voice_name)
 
-
+@app.post("/delete-voice")
+async def delete_voice_api(
+    user_id: str = Form(...),
+    voice_name: str = Form(...)
+):
+    return await delete_voice(
+        user_id=user_id,
+        voice_name=voice_name
+    )
 
 @app.post("/tts")
 async def tts(

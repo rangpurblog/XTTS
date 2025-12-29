@@ -1,6 +1,6 @@
 import os
 import shutil
-from fastapi import UploadFile
+from fastapi import UploadFile, HTTPException
 from app.audio_utils import convert_to_wav
 
 BASE_DIR = "voices"
@@ -41,4 +41,23 @@ def clone_voice(audio: UploadFile, user_id: str, voice_name: str):
         "status": "cloned",
         "voice_id": voice_name,
         "voice_path": final_ref
+    }
+
+
+async def delete_voice(user_id: str, voice_name: str):
+    voice_name = voice_name.lower().replace(" ", "_")  # ⭐ FIX
+    voice_dir = os.path.join(BASE_DIR, user_id, voice_name)
+
+    if not os.path.exists(voice_dir):
+        raise HTTPException(
+            status_code=404,
+            detail="Voice not found"
+        )
+
+    # 🔥 Delete full voice folder
+    shutil.rmtree(voice_dir)
+
+    return {
+        "status": "deleted",
+        "voice_name": voice_name
     }
