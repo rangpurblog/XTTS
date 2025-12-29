@@ -72,10 +72,12 @@ export default function LandingPage() {
                     <ChevronRight className="w-5 h-5 ml-2" />
                   </Button>
                 </Link>
-                <Button variant="outline" className="btn-secondary text-lg px-8 py-4" data-testid="demo-btn">
-                  <Play className="w-5 h-5 mr-2" />
-                  Watch Demo
-                </Button>
+                <a href="#pricing">
+                  <Button variant="outline" className="btn-secondary text-lg px-8 py-4" data-testid="pricing-btn">
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    See Pricing
+                  </Button>
+                </a>
               </div>
             </div>
             <div className="relative animate-fade-in" style={{ animationDelay: '0.2s' }}>
