@@ -30,7 +30,7 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { 
   getMyVoices, getPublicVoices, cloneVoice, deleteVoice, 
-  generateVoice, getPlans, createOrder, getUserOrders, getPaymentAccounts
+  generateVoice, getGenerationStatus, getPlans, createOrder, getUserOrders, getPaymentAccounts
 } from '@/lib/api';
 import { toast } from 'sonner';
 
