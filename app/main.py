@@ -13,7 +13,8 @@ from app.deps import admin_auth
 from app.admin_service import admin_delete_voice
 engine = XTTSVoiceCloner()
 app = FastAPI()
-# app.mount("/voices", StaticFiles(directory="voices"), name="voices")
+app.mount("/voices", StaticFiles(directory="voices"), name="voices")
+app.mount("/outputs", StaticFiles(directory="outputs"), name="outputs")
 
 @app.post("/clone-voice")
 async def clone(
