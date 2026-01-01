@@ -38,6 +38,7 @@ export const cloneVoice = (formData) => axios.post(`${API}/voices/clone`, formDa
 });
 export const deleteVoice = (id) => axios.delete(`${API}/voices/${id}`, { headers: getAuthHeader() });
 export const generateVoice = (data) => axios.post(`${API}/voices/generate`, data, { headers: getAuthHeader() });
+export const getGenerationStatus = (jobId) => axios.get(`${API}/voices/generate/status/${jobId}`, { headers: getAuthHeader() });
 
 // Admin Voices
 export const clonePublicVoice = (formData) => axios.post(`${API}/admin/voices/clone-public`, formData, { 
