@@ -390,10 +390,16 @@ const GenerateVoice = ({ user, refreshUser }) => {
   const allVoices = [...myVoices, ...publicVoices];
   const selectedVoiceData = allVoices.find(v => v.id === selectedVoice);
   const creditsNeeded = text.length; // 1 character = 1 credit
+  const MAX_CHARS = 30000; // 30k character limit (~30 min audio)
+  const isOverLimit = text.length > MAX_CHARS;
 
   const handleGenerate = async () => {
     if (!selectedVoice || !text.trim()) {
       toast.error('Please select a voice and enter text');
+      return;
+    }
+    if (isOverLimit) {
+      toast.error(`Text too long! Maximum ${MAX_CHARS.toLocaleString()} characters allowed.`);
       return;
     }
     if (user.credits < creditsNeeded) {
