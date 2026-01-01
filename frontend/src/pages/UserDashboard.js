@@ -506,8 +506,16 @@ const GenerateVoice = ({ user, refreshUser }) => {
                   placeholder="Enter the text you want to convert to speech..."
                   rows={6}
                   data-testid="text-input"
+                  className={isOverLimit ? 'border-red-500' : ''}
                 />
-                <p className="text-xs text-slate-500">{text.length} characters</p>
+                <div className="flex justify-between text-xs">
+                  <span className={isOverLimit ? 'text-red-500 font-medium' : 'text-slate-500'}>
+                    {text.length.toLocaleString()} / {MAX_CHARS.toLocaleString()} characters
+                  </span>
+                  {isOverLimit && (
+                    <span className="text-red-500">Limit exceeded!</span>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Language</Label>
@@ -530,7 +538,7 @@ const GenerateVoice = ({ user, refreshUser }) => {
               <Button 
                 className="btn-primary w-full"
                 onClick={handleGenerate}
-                disabled={generating || !selectedVoice || !text.trim()}
+                disabled={generating || !selectedVoice || !text.trim() || isOverLimit}
                 data-testid="generate-btn"
               >
                 {generating ? getStatusMessage() : 'Generate Voice'}
