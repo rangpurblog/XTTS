@@ -346,6 +346,8 @@ const GenerateVoice = ({ user, refreshUser }) => {
   const [generating, setGenerating] = useState(false);
   const [generatedAudio, setGeneratedAudio] = useState(null);
   const [language, setLanguage] = useState('en');
+  const [jobStatus, setJobStatus] = useState(null); // queued | processing | completed | failed
+  const [currentJobId, setCurrentJobId] = useState(null);
 
   useEffect(() => {
     Promise.all([getMyVoices(), getPublicVoices()])
@@ -354,6 +356,36 @@ const GenerateVoice = ({ user, refreshUser }) => {
         setPublicVoices(pub.data);
       });
   }, []);
+
+  // Poll for job status
+  useEffect(() => {
+    let interval;
+    if (currentJobId && (jobStatus === 'queued' || jobStatus === 'processing')) {
+      interval = setInterval(async () => {
+        try {
+          const res = await getGenerationStatus(currentJobId);
+          const status = res.data.status;
+          setJobStatus(status);
+          
+          if (status === 'completed') {
+            setGeneratedAudio(res.data.audio_url);
+            setGenerating(false);
+            toast.success('Voice generated successfully!');
+            refreshUser();
+            clearInterval(interval);
+          } else if (status === 'failed') {
+            setGenerating(false);
+            toast.error(res.data.error || 'Generation failed');
+            refreshUser(); // Credits refunded
+            clearInterval(interval);
+          }
+        } catch (e) {
+          console.error('Status check failed:', e);
+        }
+      }, 3000); // Poll every 3 seconds
+    }
+    return () => clearInterval(interval);
+  }, [currentJobId, jobStatus, refreshUser]);
 
   const allVoices = [...myVoices, ...publicVoices];
   const selectedVoiceData = allVoices.find(v => v.id === selectedVoice);
@@ -370,6 +402,9 @@ const GenerateVoice = ({ user, refreshUser }) => {
     }
     setGenerating(true);
     setGeneratedAudio(null);
+    setJobStatus('submitting');
+    setCurrentJobId(null);
+    
     try {
       const response = await generateVoice({ 
         voice_id: selectedVoice, 
@@ -377,15 +412,34 @@ const GenerateVoice = ({ user, refreshUser }) => {
         text,
         language
       });
-      toast.success('Voice generated successfully!');
-      if (response.data?.audio_url) {
+      
+      // New async flow - get job_id and start polling
+      if (response.data?.job_id) {
+        setCurrentJobId(response.data.job_id);
+        setJobStatus(response.data.status || 'queued');
+        toast.info('Voice generation started! Please wait...');
+      } else if (response.data?.audio_url) {
+        // Old sync flow (fallback)
         setGeneratedAudio(response.data.audio_url);
+        setGenerating(false);
+        toast.success('Voice generated successfully!');
+        refreshUser();
       }
-      refreshUser();
     } catch (e) {
       toast.error(e.response?.data?.detail || 'Generation failed');
-    } finally {
       setGenerating(false);
+      setJobStatus(null);
+    }
+  };
+
+  const getStatusMessage = () => {
+    switch (jobStatus) {
+      case 'submitting': return 'Submitting job...';
+      case 'queued': return 'In queue, waiting...';
+      case 'processing': return 'Generating audio... This may take a few minutes for long texts.';
+      case 'completed': return 'Audio ready!';
+      case 'failed': return 'Generation failed';
+      default: return '';
     }
   };
 
