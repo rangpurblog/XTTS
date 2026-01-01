@@ -413,15 +413,24 @@ const GenerateVoice = ({ user, refreshUser }) => {
         language
       });
       
-      // New async flow - get job_id and start polling
-      if (response.data?.job_id) {
+      // Check response type
+      if (response.data?.status === 'completed' && response.data?.audio_url) {
+        // Sync mode - audio ready immediately
+        setGeneratedAudio(response.data.audio_url);
+        setGenerating(false);
+        setJobStatus('completed');
+        toast.success('Voice generated successfully!');
+        refreshUser();
+      } else if (response.data?.job_id) {
+        // Async mode - start polling
         setCurrentJobId(response.data.job_id);
         setJobStatus(response.data.status || 'queued');
         toast.info('Voice generation started! Please wait...');
       } else if (response.data?.audio_url) {
-        // Old sync flow (fallback)
+        // Fallback
         setGeneratedAudio(response.data.audio_url);
         setGenerating(false);
+        setJobStatus('completed');
         toast.success('Voice generated successfully!');
         refreshUser();
       }
