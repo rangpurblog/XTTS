@@ -389,7 +389,7 @@ const GenerateVoice = ({ user, refreshUser }) => {
 
   const allVoices = [...myVoices, ...publicVoices];
   const selectedVoiceData = allVoices.find(v => v.id === selectedVoice);
-  const creditsNeeded = Math.max(1, Math.floor(text.length / 10));
+  const creditsNeeded = text.length; // 1 character = 1 credit
 
   const handleGenerate = async () => {
     if (!selectedVoice || !text.trim()) {
