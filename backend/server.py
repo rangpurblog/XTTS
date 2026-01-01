@@ -595,9 +595,9 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
     Submit TTS job - returns job_id immediately
     Frontend should poll /voices/generate/status/{job_id} for progress
     """
-    # Check credits
+    # Check credits (1 character = 1 credit)
     text_length = len(request.text)
-    credits_needed = max(1, text_length // 10)  # 1 credit per 10 chars
+    credits_needed = text_length  # 1 credit per character
     
     if user["credits"] < credits_needed:
         raise HTTPException(status_code=400, detail=f"Insufficient credits. Need {credits_needed}, have {user['credits']}")
