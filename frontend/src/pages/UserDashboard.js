@@ -518,8 +518,26 @@ const GenerateVoice = ({ user, refreshUser }) => {
                 disabled={generating || !selectedVoice || !text.trim()}
                 data-testid="generate-btn"
               >
-                {generating ? 'Generating...' : 'Generate Voice'}
+                {generating ? getStatusMessage() : 'Generate Voice'}
               </Button>
+              
+              {/* Progress indicator */}
+              {generating && jobStatus && (
+                <Card className="bg-amber-50 border-amber-200">
+                  <CardContent className="pt-4">
+                    <div className="flex items-center gap-3">
+                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                      <div>
+                        <p className="font-medium text-slate-900">{getStatusMessage()}</p>
+                        <p className="text-xs text-slate-500">
+                          {jobStatus === 'queued' && 'Your request is in the queue'}
+                          {jobStatus === 'processing' && 'GPU is processing your audio'}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
               
               {/* Audio Player */}
               {generatedAudio && (
