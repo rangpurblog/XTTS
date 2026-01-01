@@ -592,12 +592,17 @@ async def delete_voice(voice_id: str, user = Depends(get_current_user)):
 @api_router.post("/voices/generate")
 async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_current_user)):
     """
-    Submit TTS job - returns job_id immediately
-    Frontend should poll /voices/generate/status/{job_id} for progress
+    Generate TTS - supports both sync and async XTTS server
     """
-    # Check credits
+    # Character limit (30k = ~30 min audio)
+    MAX_CHARS = 30000
     text_length = len(request.text)
-    credits_needed = max(1, text_length // 10)  # 1 credit per 10 chars
+    
+    if text_length > MAX_CHARS:
+        raise HTTPException(status_code=400, detail=f"Text too long! Maximum {MAX_CHARS} characters allowed. You have {text_length}.")
+    
+    # Check credits (1 character = 1 credit)
+    credits_needed = text_length
     
     if user["credits"] < credits_needed:
         raise HTTPException(status_code=400, detail=f"Insufficient credits. Need {credits_needed}, have {user['credits']}")
@@ -606,11 +611,9 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
     if not voice:
         raise HTTPException(status_code=404, detail="Voice not found")
     
-    # Check if user owns the voice or it's public
     if voice["user_id"] != user["id"] and not voice.get("is_public"):
         raise HTTPException(status_code=403, detail="Access denied to this voice")
     
-    # Call XTTS server /tts endpoint (now async - returns job_id)
     try:
         xtts_user_id = voice["user_id"]
         voice_name = voice.get("voice_name", voice.get("name"))
@@ -622,61 +625,98 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
             "language": request.language or "en"
         }
         
-        response = await http_client.post(f"{XTTS_SERVER_URL}/tts", data=data, timeout=30.0)
+        # Long timeout for sync generation (5 minutes)
+        response = await http_client.post(f"{XTTS_SERVER_URL}/tts", data=data, timeout=300.0)
         
         if response.status_code != 200:
-            error_detail = response.json().get("detail", "TTS submission failed")
+            error_detail = response.json().get("detail", "TTS generation failed")
             raise HTTPException(status_code=response.status_code, detail=error_detail)
         
         result = response.json()
-        xtts_job_id = result.get("job_id")
         
-        # Pre-deduct credits (will refund if failed)
-        await db.users.update_one(
-            {"id": user["id"]},
-            {"$inc": {"credits": -credits_needed}}
-        )
+        # Check if async (has job_id) or sync (has output)
+        if result.get("job_id"):
+            # Async mode - store job for polling
+            xtts_job_id = result.get("job_id")
+            
+            await db.users.update_one({"id": user["id"]}, {"$inc": {"credits": -credits_needed}})
+            
+            generation_id = str(uuid.uuid4())
+            await db.voice_generations.insert_one({
+                "id": generation_id,
+                "xtts_job_id": xtts_job_id,
+                "user_id": user["id"],
+                "voice_id": request.voice_id,
+                "voice_name": voice_name,
+                "text": request.text,
+                "text_length": text_length,
+                "credits_used": credits_needed,
+                "status": "queued",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            await db.credit_transactions.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user["id"],
+                "amount": -credits_needed,
+                "type": "voice_generation",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            return {
+                "id": generation_id,
+                "job_id": xtts_job_id,
+                "status": "queued",
+                "message": "Voice generation started. Poll status endpoint for progress.",
+                "credits_used": credits_needed
+            }
+        else:
+            # Sync mode - audio ready immediately
+            audio_path = result.get("output", "")
+            audio_url = f"{XTTS_SERVER_URL}/{audio_path}" if audio_path else ""
+            
+            await db.users.update_one({"id": user["id"]}, {"$inc": {"credits": -credits_needed}})
+            
+            generation_id = str(uuid.uuid4())
+            await db.voice_generations.insert_one({
+                "id": generation_id,
+                "user_id": user["id"],
+                "voice_id": request.voice_id,
+                "voice_name": voice_name,
+                "text": request.text,
+                "text_length": text_length,
+                "credits_used": credits_needed,
+                "status": "completed",
+                "audio_url": audio_url,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            await db.credit_transactions.insert_one({
+                "id": str(uuid.uuid4()),
+                "user_id": user["id"],
+                "amount": -credits_needed,
+                "type": "voice_generation",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            })
+            
+            return {
+                "id": generation_id,
+                "status": "completed",
+                "message": "Voice generated successfully",
+                "credits_used": credits_needed,
+                "audio_url": audio_url
+            }
         
-        # Store job in our DB
-        generation_id = str(uuid.uuid4())
-        await db.voice_generations.insert_one({
-            "id": generation_id,
-            "xtts_job_id": xtts_job_id,
-            "user_id": user["id"],
-            "voice_id": request.voice_id,
-            "voice_name": voice_name,
-            "text": request.text,
-            "text_length": text_length,
-            "credits_used": credits_needed,
-            "status": "queued",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        # Record credit transaction
-        await db.credit_transactions.insert_one({
-            "id": str(uuid.uuid4()),
-            "user_id": user["id"],
-            "amount": -credits_needed,
-            "type": "voice_generation",
-            "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        
-        return {
-            "id": generation_id,
-            "job_id": xtts_job_id,
-            "status": "queued",
-            "message": "Voice generation started. Poll status endpoint for progress.",
-            "credits_used": credits_needed
-        }
-        
+    except httpx.TimeoutException:
+        raise HTTPException(status_code=504, detail="Voice generation timed out. Try shorter text or try again later.")
     except httpx.RequestError as e:
         logger.error(f"XTTS server connection error: {e}")
         raise HTTPException(status_code=503, detail="TTS service unavailable. Please try again later.")
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"TTS submission error: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to submit voice generation: {str(e)}")
+        logger.error(f"TTS error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate voice: {str(e)}")
 
 @api_router.get("/voices/generate/status/{job_id}")
 async def get_generation_status(job_id: str, user = Depends(get_current_user)):

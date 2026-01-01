@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 # Python cache
  __pycache__/ 
 *.py[cod] 
@@ -29,8 +28,6 @@ voices/
 .DS_Store 
 Thumbs.db
 
-
-=======
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # IDE and editors
@@ -115,7 +112,3 @@ android-sdk/ -e
 *.env
 *.env.*
 -e 
-# Environment files
-*.env
-*.env.*
->>>>>>> 6083568e00fa3662a1c557df3a36fca6a4b2a265

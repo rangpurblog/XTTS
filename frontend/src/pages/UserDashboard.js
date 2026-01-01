@@ -389,11 +389,17 @@ const GenerateVoice = ({ user, refreshUser }) => {
 
   const allVoices = [...myVoices, ...publicVoices];
   const selectedVoiceData = allVoices.find(v => v.id === selectedVoice);
-  const creditsNeeded = Math.max(1, Math.floor(text.length / 10));
+  const creditsNeeded = text.length; // 1 character = 1 credit
+  const MAX_CHARS = 30000; // 30k character limit (~30 min audio)
+  const isOverLimit = text.length > MAX_CHARS;
 
   const handleGenerate = async () => {
     if (!selectedVoice || !text.trim()) {
       toast.error('Please select a voice and enter text');
+      return;
+    }
+    if (isOverLimit) {
+      toast.error(`Text too long! Maximum ${MAX_CHARS.toLocaleString()} characters allowed.`);
       return;
     }
     if (user.credits < creditsNeeded) {
@@ -413,15 +419,24 @@ const GenerateVoice = ({ user, refreshUser }) => {
         language
       });
       
-      // New async flow - get job_id and start polling
-      if (response.data?.job_id) {
+      // Check response type
+      if (response.data?.status === 'completed' && response.data?.audio_url) {
+        // Sync mode - audio ready immediately
+        setGeneratedAudio(response.data.audio_url);
+        setGenerating(false);
+        setJobStatus('completed');
+        toast.success('Voice generated successfully!');
+        refreshUser();
+      } else if (response.data?.job_id) {
+        // Async mode - start polling
         setCurrentJobId(response.data.job_id);
         setJobStatus(response.data.status || 'queued');
         toast.info('Voice generation started! Please wait...');
       } else if (response.data?.audio_url) {
-        // Old sync flow (fallback)
+        // Fallback
         setGeneratedAudio(response.data.audio_url);
         setGenerating(false);
+        setJobStatus('completed');
         toast.success('Voice generated successfully!');
         refreshUser();
       }
@@ -491,8 +506,16 @@ const GenerateVoice = ({ user, refreshUser }) => {
                   placeholder="Enter the text you want to convert to speech..."
                   rows={6}
                   data-testid="text-input"
+                  className={isOverLimit ? 'border-red-500' : ''}
                 />
-                <p className="text-xs text-slate-500">{text.length} characters</p>
+                <div className="flex justify-between text-xs">
+                  <span className={isOverLimit ? 'text-red-500 font-medium' : 'text-slate-500'}>
+                    {text.length.toLocaleString()} / {MAX_CHARS.toLocaleString()} characters
+                  </span>
+                  {isOverLimit && (
+                    <span className="text-red-500">Limit exceeded!</span>
+                  )}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>Language</Label>
@@ -515,7 +538,7 @@ const GenerateVoice = ({ user, refreshUser }) => {
               <Button 
                 className="btn-primary w-full"
                 onClick={handleGenerate}
-                disabled={generating || !selectedVoice || !text.trim()}
+                disabled={generating || !selectedVoice || !text.trim() || isOverLimit}
                 data-testid="generate-btn"
               >
                 {generating ? getStatusMessage() : 'Generate Voice'}
