@@ -594,8 +594,14 @@ async def generate_voice(request: GenerateVoiceRequest, user = Depends(get_curre
     """
     Generate TTS - supports both sync and async XTTS server
     """
-    # Check credits (1 character = 1 credit)
+    # Character limit (30k = ~30 min audio)
+    MAX_CHARS = 30000
     text_length = len(request.text)
+    
+    if text_length > MAX_CHARS:
+        raise HTTPException(status_code=400, detail=f"Text too long! Maximum {MAX_CHARS} characters allowed. You have {text_length}.")
+    
+    # Check credits (1 character = 1 credit)
     credits_needed = text_length
     
     if user["credits"] < credits_needed:
