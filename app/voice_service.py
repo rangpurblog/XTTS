@@ -4,6 +4,14 @@ import json
 from TTS.api import TTS
 from app.audio_utils import wav_to_mp3
 from app.xtts_engine import XTTSVoiceCloner
+from pydub import AudioSegment  # 🔥 ADD THIS
+
+# 🔥 ADD THIS FUNCTION
+def smooth_audio(audio_path):
+    """Add fade in/out for smoother transitions"""
+    audio = AudioSegment.from_wav(audio_path)
+    audio = audio.fade_in(50).fade_out(50)
+    audio.export(audio_path, format="wav")
 
 # 🔥 Load XTTS once (GPU)
 tts = TTS(
@@ -63,6 +71,9 @@ def generate_voice(
         out_path=out_wav,
         language=language
     )
+
+    # 🔥 ADD THIS LINE - smooth audio after generation
+    smooth_audio(out_wav)
 
     return out_wav
 
